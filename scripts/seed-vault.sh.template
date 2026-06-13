@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# seed-vault.sh — populate the 1Claw vault with the agent's commerce credentials.
+#
+# This TEMPLATE takes NO hardcoded secrets. Copy it to seed-vault.sh.local
+# (gitignored) and run that, OR just run this template directly — every value is
+# read interactively with `read -s` so nothing is echoed or written to shell
+# history. Blank input skips that path.
+#
+#   cp scripts/seed-vault.sh.template scripts/seed-vault.sh.local
+#   # 1Claw human key — sourced from your secrets file, NOT stored in the repo:
+#   source ~/.secrets/1claw.env && export ONECLAW_API_KEY="$ONE_CLAW_API_KEY"
+#   bash scripts/seed-vault.sh.local
+#
+# Prereqs: ONECLAW_API_KEY exported in this shell, ONECLAW_VAULT_ID present in .env
+# (created by `just reset -- --yes`). The Ampersend agent secret is seeded
+# separately by `just bootstrap-commerce`.
+#
+# After running, confirm at the app's /vault page — values are never displayed.
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [ -z "${ONECLAW_API_KEY:-}" ]; then
+  echo "ERROR: ONECLAW_API_KEY is not set." >&2
+  echo "  source ~/.secrets/1claw.env && export ONECLAW_API_KEY=\"\$ONE_CLAW_API_KEY\"" >&2
+  exit 1
+fi
+
+VID="$(grep -E '^ONECLAW_VAULT_ID=' .env | cut -d= -f2 || true)"
+if [ -z "${VID:-}" ]; then
+  echo "ERROR: ONECLAW_VAULT_ID is empty in .env — run 'just reset -- --yes' first." >&2
+  exit 1
+fi
+echo "Seeding vault $VID. Press ENTER to skip any value."
+echo
+
+# seed <vault-path> <prompt>  — reads hidden input, PUTs via secret-add (SECRET_VALUE env, never argv)
+seed() {
+  local path="$1" prompt="$2" val
+  read -r -s -p "  $prompt: " val; echo
+  if [ -z "$val" ]; then echo "    · skipped $path"; return; fi
+  SECRET_VALUE="$val" node scripts/secret-add.mjs vault "$path" >/dev/null
+  unset val
+  echo "    ✓ $path"
+}
+
+echo "— Lasso prepaid card (user-provisioned; fallback payment instrument) —"
+seed commerce/lasso/card-pan   "Card number (PAN, 16 digits)"
+seed commerce/lasso/card-exp   "Expiry (MM/YY)"
+seed commerce/lasso/card-cvc   "CVC (3-4 digits)"
+seed commerce/lasso/card-name  "Cardholder name"
+seed commerce/lasso/billing-zip "Billing ZIP (AVS)"
+echo
+
+echo "— Vendor API keys (sandbox/test) —"
+seed commerce/vendors/duffel-api-key     "Duffel TEST API key"
+seed commerce/vendors/tremendous-api-key "Tremendous SANDBOX API key"
+seed commerce/vendors/domino-account     "Domino's account (JSON blob)"
+echo
+
+echo "Done. Verify the populated paths at http://localhost:3000/vault"

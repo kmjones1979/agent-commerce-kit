@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "ampersend": {
+      "source": "edgeandnode/ampersend-sdk",
+      "ref": "skills/latest",
+      "sourceType": "github",
+      "skillPath": "skills/ampersend/SKILL.md",
+      "computedHash": "b136fe4dad515fa7818511a36b9bd957c4c06464848e4411a16781ef47bc2887"
+    }
+  }
+}
