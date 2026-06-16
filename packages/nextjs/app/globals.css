@@ -2,46 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Ampersend-inspired theme: dark, techy, teal accent.
+ * Palette sampled from ampersend.ai — near-black surfaces (#0a0a0a–#232323),
+ * off-white text (#efeff3), bright cyan/teal primary (#1ccfd6) and the signature
+ * CTA gradient (#1e8c91 → #328cc3). Fonts: Sora (display/UI), Geist Mono (code).
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
+    --background: 240 9% 5%;
+    --foreground: 240 20% 96%;
+    --card: 240 8% 8%;
+    --card-foreground: 240 20% 96%;
+    --popover: 240 8% 8%;
+    --popover-foreground: 240 20% 96%;
+    --primary: 184 76% 48%;
+    --primary-foreground: 200 40% 7%;
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 240 20% 96%;
+    --muted: 240 6% 13%;
+    --muted-foreground: 240 6% 64%;
+    --accent: 240 6% 15%;
+    --accent-foreground: 240 20% 97%;
+    --destructive: 357 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 17%;
+    --input: 240 6% 17%;
+    --ring: 184 76% 48%;
+    --radius: 0.75rem;
+
+    /* Brand extras (hex; used by utilities below). */
+    --brand-teal: #1ccfd6;
+    --brand-aqua: #00baa7;
+    --brand-grad-from: #1e8c91;
+    --brand-grad-to: #328cc3;
+    --brand-mint: #8cffdc;
+    --brand-iris: #aac8ff;
+
+    --font-sans: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
   }
 
+  /* App ships with <html class="dark">; keep .dark identical so it's dark either way. */
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: 240 9% 5%;
+    --foreground: 240 20% 96%;
+    --card: 240 8% 8%;
+    --card-foreground: 240 20% 96%;
+    --popover: 240 8% 8%;
+    --popover-foreground: 240 20% 96%;
+    --primary: 184 76% 48%;
+    --primary-foreground: 200 40% 7%;
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 240 20% 96%;
+    --muted: 240 6% 13%;
+    --muted-foreground: 240 6% 64%;
+    --accent: 240 6% 15%;
+    --accent-foreground: 240 20% 97%;
+    --destructive: 357 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 17%;
+    --input: 240 6% 17%;
+    --ring: 184 76% 48%;
   }
 }
 
@@ -50,10 +72,46 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    font-family: var(--font-sans);
+    /* Subtle teal glow at the top, fading into the near-black background. */
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(
+      60% 48% at 50% -8%,
+      rgba(28, 207, 214, 0.1),
+      transparent 70%
+    );
+    background-attachment: fixed;
   }
-  /* Keyboard focus: visible ring without changing mouse click outline behavior */
+  h1, h2, h3, h4 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+  }
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
+  }
   :where(a, button, input, textarea, select, summary):focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* Signature Ampersend CTA gradient. */
+  .brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand-grad-from) 0%, var(--brand-grad-to) 100%);
+  }
+  .brand-gradient:hover {
+    filter: brightness(1.08);
+  }
+  /* Teal→blue gradient clipped to text (for the wordmark/headline). */
+  .brand-text {
+    background-image: linear-gradient(90deg, var(--brand-teal), var(--brand-grad-to));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Thin teal hairline / ring used on focused brand surfaces. */
+  .brand-ring {
+    box-shadow: 0 0 0 1px rgba(28, 207, 214, 0.35), 0 8px 30px -12px rgba(28, 207, 214, 0.45);
   }
 }

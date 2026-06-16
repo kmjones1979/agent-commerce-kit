@@ -48,7 +48,7 @@ function promptHidden(label) {
         process.stdin.setRawMode(false);
         process.stdin.pause();
         process.stdin.removeListener("data", onData);
-        process.stdout.write("\n");
+        process.stdout.write(" " + "*".repeat(Math.min(buf.length, 32)) + "\n");
         resolve(buf);
       } else if (code === 3) {
         process.stdout.write("\n");
@@ -92,7 +92,7 @@ async function registerAgent(token, name) {
   const res = await fetch(BASE + "/v1/agents", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, shroud_enabled: true }),
   });
   if (!res.ok) throw new Error("Register agent failed: " + res.status + " " + (await res.text()));
   const json = await res.json();

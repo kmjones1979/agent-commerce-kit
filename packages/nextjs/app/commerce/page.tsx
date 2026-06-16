@@ -47,8 +47,8 @@ export default function CommercePage() {
           const Icon = v.icon;
           return (
             <div key={v.id} className="rounded-lg border border-border p-4 flex gap-4">
-              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <Icon className="h-5 w-5 text-muted-foreground" aria-hidden />
+              <div className="h-10 w-10 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
+                <Icon className="h-5 w-5 text-brand" aria-hidden />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="font-medium">{v.title}</h2>
@@ -56,7 +56,7 @@ export default function CommercePage() {
                 <div className="mt-3 flex items-center gap-3">
                   <Link
                     href={`/?prompt=${encodeURIComponent(v.prompt)}`}
-                    className="inline-flex items-center rounded-md bg-primary text-primary-foreground text-sm px-3 py-1.5 hover:opacity-90"
+                    className="inline-flex items-center rounded-md brand-gradient text-white text-sm px-3 py-1.5 hover:brightness-110 transition-[filter]"
                   >
                     Try it
                   </Link>

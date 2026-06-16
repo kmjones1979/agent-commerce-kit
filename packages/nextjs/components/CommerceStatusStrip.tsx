@@ -69,7 +69,7 @@ export function CommerceStatusStrip() {
   return (
     <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
       <span className="inline-flex items-center gap-1.5 font-medium">
-        <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+        <ShieldCheck className="h-3.5 w-3.5 text-brand" aria-hidden />
         Ampersend
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full ${

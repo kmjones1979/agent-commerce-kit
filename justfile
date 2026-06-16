@@ -8,6 +8,10 @@ default:
 bootstrap:
     node scripts/bootstrap.mjs
 
+# Enable 1Claw Shroud LLM token billing on the current agent (prompts for human key)
+enable-shroud:
+    node scripts/enable-shroud.mjs
+
 # Start local Foundry chain
 chain:
     cd packages/foundry && anvil

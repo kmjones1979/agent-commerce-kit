@@ -38,12 +38,14 @@ export default function Home() {
         className="border-b border-border px-6 py-4 flex items-center gap-3"
         role="banner"
       >
-        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <Bot className="h-4 w-4 text-primary-foreground" aria-hidden />
+        <div className="h-8 w-8 rounded-lg brand-gradient flex items-center justify-center shrink-0 brand-ring">
+          <Bot className="h-4 w-4 text-white" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-semibold">agent-commerce-kit</h1>
-          <p className="text-xs text-muted-foreground">Onchain AI Agent</p>
+          <h1 className="text-sm font-semibold tracking-tight">
+            Agent <span className="brand-text">Commerce</span> Kit
+          </h1>
+          <p className="text-xs text-muted-foreground">Onchain agent · Ampersend policy · 1Claw vault</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1">
@@ -293,6 +295,7 @@ export default function Home() {
         />
         <Button
           type="submit"
+          variant="brand"
           size="icon"
           disabled={isLoading || !input.trim()}
           aria-label="Send message"

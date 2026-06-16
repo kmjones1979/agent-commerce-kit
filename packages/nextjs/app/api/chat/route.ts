@@ -1,52 +1,59 @@
 import { convertToCoreMessages, streamText, type Message } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { createClient } from "@1claw/sdk";
 
 import { buildAgentOnchainTools } from "@/lib/agent-onchain-tools";
 import { buildCommerceTools } from "@/lib/commerce/tools";
+import { vault, SecretNotFound } from "@/lib/commerce/vault";
 
 // child_process (ampersend CLI) + node:sqlite (audit log) require the Node runtime.
 export const runtime = "nodejs";
 
 const _tools = { ...buildAgentOnchainTools(), ...buildCommerceTools() };
 
-const client = createClient({
-  baseUrl: "https://api.1claw.xyz",
-  apiKey: process.env.ONECLAW_API_KEY!,
-});
+const SHROUD_BASE_URL = "https://shroud.1claw.xyz/v1";
+const DEFAULT_MODEL = "gpt-4o";
 
-let cachedKey: string | null = null;
+/**
+ * Build the LLM provider. Prefers 1Claw Shroud (token-billed, no key needed)
+ * if agent credentials are configured. Falls back to direct Anthropic with a
+ * vault-stored key.
+ */
+async function getModel() {
+  const agentId = (process.env.ONECLAW_AGENT_ID || "").trim();
+  const agentApiKey = (process.env.ONECLAW_AGENT_API_KEY || "").trim();
 
-async function getLlmKey(): Promise<string> {
-  if (cachedKey) return cachedKey;
-  const vaultId = (process.env.ONECLAW_VAULT_ID || "").trim();
-  const apiKey = (process.env.ONECLAW_API_KEY || "").trim();
-  if (!apiKey) {
-    throw new Error(
-      "ONECLAW_API_KEY is missing. Set it in .env so the server can read the vault.",
-    );
+  // Shroud path: agent credentials route LLM calls through 1Claw's proxy.
+  // Token billing is handled by 1Claw — no LLM API key needed.
+  if (agentId && agentApiKey) {
+    const shroud = createOpenAI({
+      baseURL: SHROUD_BASE_URL,
+      apiKey: "unused",
+      compatibility: "strict",
+      headers: {
+        "X-Shroud-Agent-Key": `${agentId}:${agentApiKey}`,
+        "X-Shroud-Provider": "openai",
+      },
+    });
+    return shroud(DEFAULT_MODEL);
   }
-  if (!vaultId) {
-    throw new Error(
-      "ONECLAW_VAULT_ID is missing. Copy your vault id from 1claw.xyz into .env.",
-    );
+
+  // Fallback: direct Anthropic with a key from the vault.
+  let key: string;
+  try {
+    const secret = await vault.read("llm-api-key");
+    key = await secret.use((raw) => raw);
+  } catch (e) {
+    if (e instanceof SecretNotFound) {
+      throw new Error(
+        "No LLM credentials available. Either set ONECLAW_AGENT_ID + ONECLAW_AGENT_API_KEY " +
+          "for Shroud token billing, or store an Anthropic key: just vault llm-api-key YOUR_KEY",
+      );
+    }
+    throw e;
   }
-  const res = await client.secrets.get(vaultId, "llm-api-key");
-  if (res.error) {
-    throw new Error(
-      "1Claw vault read failed: " +
-        res.error.message +
-        ". Check ONECLAW_API_KEY and ONECLAW_VAULT_ID.",
-    );
-  }
-  const value = res.data?.value;
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(
-      'No secret at vault path "llm-api-key". Add your LLM API key in the 1Claw dashboard (same path the scaffold uses) or set it via the API, then restart next dev.',
-    );
-  }
-  cachedKey = value.trim();
-  return cachedKey;
+  const provider = createAnthropic({ apiKey: key.trim() });
+  return provider("claude-sonnet-4-6-20250217");
 }
 
 export async function POST(req: Request) {
@@ -66,21 +73,21 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   }
-  let key: string;
+
+  let model;
   try {
-    key = await getLlmKey();
+    model = await getModel();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[api/chat] getLlmKey:", msg);
+    console.error("[api/chat] getModel:", msg);
     return new Response(JSON.stringify({ error: msg }), {
       status: 502,
       headers: { "Content-Type": "application/json" },
     });
   }
-  const provider = createAnthropic({ apiKey: key });
 
   const result = streamText({
-    model: provider("claude-sonnet-4-6-20250217"),
+    model,
     system:
       "You are an onchain AI agent that can also place real commerce orders. " +
       "On-chain tools (list_deployed_contracts, contract_read) work against this repo's deployed contracts and RPC; prefer them over guessing addresses or ABIs. If oneclaw_intent_simulate / oneclaw_intent_submit are present they call 1Claw Intents (TEE signing; https://1claw.xyz/intents) — never submit high-value txs without explicit user confirmation. x402_paid_fetch calls APIs behind x402 paywalls. " +
