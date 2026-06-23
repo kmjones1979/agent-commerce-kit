@@ -6,7 +6,7 @@
  * through `PaymentInstrument.use(fn)` and the `Secret` wrapper in vault.ts.
  */
 
-export type VendorId = "domino" | "duffel" | "tremendous";
+export type VendorId = "domino" | "duffel" | "tremendous" | "printful";
 
 export interface OrderIntent {
   vendorId: VendorId;

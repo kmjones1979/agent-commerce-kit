@@ -6,15 +6,17 @@
   "workspaces": [
     "packages/*"
   ],
-  "scripts": {},
   "devDependencies": {
-    "viem": "^2.21.0",
-    "qrcode-terminal": "^0.12.0",
-    "agent0-sdk": "^1.7.1",
-    "tsx": "^4.19.0",
-    "dotenv": "^16.4.0",
     "@ampersend_ai/ampersend-sdk": "0.0.14",
+    "@x402/core": "^2.11.0",
     "@x402/fetch": "^2.11.0",
-    "@x402/core": "^2.11.0"
+    "agent0-sdk": "^1.7.1",
+    "dotenv": "^16.4.0",
+    "qrcode-terminal": "^0.12.0",
+    "tsx": "^4.19.0",
+    "viem": "^2.21.0"
+  },
+  "dependencies": {
+    "ethers": "^6.17.0"
   }
 }

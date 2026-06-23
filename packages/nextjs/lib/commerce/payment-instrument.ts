@@ -2,18 +2,19 @@
  * payment-instrument.ts — resolve the agent's current payment instrument.
  *
  * Resolution order (configurable via COMMERCE_PAYMENT_INSTRUMENT):
- *   1. "ampersend" — a per-order prepaid Visa minted via `ampersend card issue`
- *      (Laso under the hood). The issuance IS the policy-co-signed spend.
+ *   1. "ampersend" — first checks the vault for an existing Lasso card with
+ *      sufficient balance (via `ampersend card details`). If found, reuses it.
+ *      Otherwise mints a new prepaid Visa via `ampersend card issue`.
  *   2. "lasso"     — a user-provisioned Lasso card whose PAN/exp/CVC/name/zip
  *      live in the 1Claw vault at commerce/lasso/*.
- *   "auto" (default) tries ampersend, then falls back to lasso.
+ *   "auto" (default) tries vault lasso card, then ampersend, then preview.
  *
  * Raw card fields are only ever exposed inside `PaymentInstrument.use(fn)`.
  * `last4`/`label`/`kind` are the only details that may be logged or returned to
  * the chat route.
  */
 import { vault, Secret, last4 as secretLast4, SecretNotFound } from "./vault";
-import { issueCard, waitForCard } from "./ampersend";
+import { issueCard, waitForCard, getCardBalance } from "./ampersend";
 import type { CardFields, PaymentInstrument } from "./types";
 
 const LASSO = {
@@ -22,6 +23,7 @@ const LASSO = {
   cvc: "commerce/lasso/card-cvc",
   name: "commerce/lasso/card-name",
   zip: "commerce/lasso/billing-zip",
+  cardId: "commerce/lasso/card-id",
 };
 
 function mode(): "auto" | "ampersend" | "lasso" {
@@ -69,7 +71,28 @@ function cardIssueAllowed(): boolean {
   return (process.env.COMMERCE_ALLOW_CARD_ISSUE || "").toLowerCase() === "true";
 }
 
+/**
+ * Check if a previously issued card in the vault has enough balance for this
+ * order. Returns the vault-based lasso instrument if so, null otherwise.
+ */
+async function tryReuseExistingCard(amountUsd: number): Promise<PaymentInstrument | null> {
+  try {
+    const cardIdSecret = await vault.read(LASSO.cardId, "payment:check-balance");
+    const cardId = await cardIdSecret.use((raw) => raw);
+    const balResult = await getCardBalance(cardId);
+    if ("error" in balResult) return null;
+    if (balResult.status !== "ready" || balResult.balanceUsd < amountUsd) return null;
+    return await lassoCardInstrument();
+  } catch {
+    return null;
+  }
+}
+
 async function ampersendCardInstrument(amountUsd: number): Promise<PaymentInstrument> {
+  // Try reusing an existing card with sufficient balance before minting a new one.
+  const existing = await tryReuseExistingCard(amountUsd);
+  if (existing) return existing;
+
   const issued = await issueCard(amountUsd);
   if ("error" in issued) {
     throw new InstrumentError(`Ampersend card issue failed: ${issued.error}`);

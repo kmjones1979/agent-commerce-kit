@@ -13,6 +13,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { authorizeOrder, recordSettlement } from "./policy";
 import { vendors } from "./vendors";
+import { confirmPrintfulOrder } from "./vendors/printful";
 import { getSpendConfig, getPayments, getAgentSnapshot } from "./ampersend";
 import { PolicyDenied, type OrderResult, type VendorId } from "./types";
 
@@ -101,6 +102,61 @@ export function buildCommerceTools() {
         const quote = await vendors.tremendous.priceQuote();
         const amt = amountUsd ?? quote.amountUsd;
         return placeOrder("tremendous", quote.description, amt, false, { amountUsd: amt });
+      },
+    }),
+
+    order_printful_mug: tool({
+      description:
+        "Phase 1: Create a DRAFT order for a glossy mug (11 oz, white or black) with a custom image, from Printful. " +
+        "This issues an Ampersend Lasso card (debiting the agent's balance), stores the card in the vault, and creates a draft order on Printful — but does NOT confirm it yet. " +
+        "You MUST ask the user for their shipping address (name, address, city, state, zip, country) before calling this tool. " +
+        "After this tool returns, show the user the masked card info (last 4 digits) from the result, tell them to run " +
+        "`node scripts/with-secrets.mjs -- node scripts/show-lasso-card.mjs` in their terminal to see full card details, " +
+        "and instruct them to add the card at printful.com/dashboard/wallet (one-time setup). " +
+        "Then WAIT for the user to say they have added the card before calling confirm_printful_order.",
+      parameters: z.object({
+        imageUrl: z.string().url().describe("Publicly accessible URL of the image to print on the mug."),
+        color: z.enum(["white", "black"]).optional().default("white").describe("Mug color: white or black."),
+        recipientName: z.string().optional().describe("Shipping recipient full name. Ask the user if not provided."),
+        address1: z.string().optional().describe("Street address line 1. Ask the user if not provided."),
+        city: z.string().optional().describe("City. Ask the user if not provided."),
+        stateCode: z.string().optional().describe("State/province code (e.g. CA, NY, TX). Ask the user if not provided."),
+        zip: z.string().optional().describe("Postal/ZIP code. Ask the user if not provided."),
+        countryCode: z.string().optional().default("US").describe("Two-letter country code (default US)."),
+        note: z.string().optional().describe("Optional note for the audit log."),
+      }),
+      execute: async ({ imageUrl, color, recipientName, address1, city, stateCode, zip, countryCode, note }) => {
+        const fullInput = { imageUrl, color, recipientName, address1, city, stateCode, zip, countryCode };
+        const quote = await vendors.printful.priceQuote(fullInput);
+        return placeOrder("printful", quote.description, quote.amountUsd, true, {
+          ...fullInput, note,
+        });
+      },
+    }),
+
+    confirm_printful_order: tool({
+      description:
+        "Phase 2: Confirm a previously created Printful draft order. Only call this AFTER the user confirms they have added the Lasso card to their Printful billing page. " +
+        "Pass the orderId that was returned by order_printful_mug. This submits the order for fulfillment and Printful will charge the linked card.",
+      parameters: z.object({
+        orderId: z.string().describe("The Printful draft order ID returned by order_printful_mug (from the orderRef field)."),
+      }),
+      execute: async ({ orderId }) => {
+        try {
+          const result = await confirmPrintfulOrder(orderId);
+          return {
+            ok: result.submitted,
+            decision: result.submitted ? "approved" : "error",
+            summary: result.summary,
+            orderRef: result.orderRef,
+          } as ToolOutcome;
+        } catch (e) {
+          return {
+            ok: false,
+            decision: "error",
+            reason: e instanceof Error ? e.message : String(e),
+          } as ToolOutcome;
+        }
       },
     }),
 

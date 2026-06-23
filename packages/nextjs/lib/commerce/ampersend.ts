@@ -234,6 +234,21 @@ export async function waitForCard(
   return { error: `card ${cardId} not ready after polling` };
 }
 
+/** Query an existing card's remaining balance (masked, no --reveal). */
+export async function getCardBalance(
+  cardId: string,
+): Promise<{ balanceUsd: number; status: string } | { error: string }> {
+  const env = await runAmpersend(["card", "details", cardId]);
+  if (!env.ok) return { error: env.error?.message || "card details failed" };
+  const d = (env.data ?? {}) as Record<string, unknown>;
+  const status = String(d.status ?? "unknown");
+  const bal = d.balance !== undefined ? Number(d.balance) : null;
+  if (bal === null || Number.isNaN(bal)) {
+    return { error: `card ${cardId} returned no balance (status: ${status})` };
+  }
+  return { balanceUsd: bal, status };
+}
+
 /** Whether an Ampersend credential is reachable (vault or local context). */
 export async function ampersendConfigured(): Promise<boolean> {
   const env = await runAmpersend(["agent", "owner"]);

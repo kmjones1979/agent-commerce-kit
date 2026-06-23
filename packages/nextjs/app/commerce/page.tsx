@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Pizza, Plane, Gift } from "lucide-react";
+import { ArrowLeft, Pizza, Plane, Gift, Coffee } from "lucide-react";
 
 const VENDORS = [
   {
@@ -24,6 +24,13 @@ const VENDORS = [
     title: "Tremendous — gift card (SANDBOX)",
     blurb: "Send a $5 Amazon gift card to the demo recipient email, against the Tremendous sandbox. Dry-run unless COMMERCE_TREMENDOUS_LIVE=true.",
     prompt: "Send a $5 Amazon gift card to the demo recipient.",
+  },
+  {
+    id: "printful",
+    icon: Coffee,
+    title: "Printful — custom mug",
+    blurb: "Order a White Glossy Mug (11 oz) with a custom image printed on it via the Printful API. Dry-run unless COMMERCE_PRINTFUL_LIVE=true.",
+    prompt: "Order me a coffee mug with this image printed on it: https://files.cdn.printful.com/files/ea4/ea44330b887dfec278dbc4626a759547_thumb.png",
   },
 ];
 
